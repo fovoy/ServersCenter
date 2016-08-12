@@ -1,4 +1,4 @@
-package com.fovoy.management;
+package com.fovoy;
 
 /**
  * Created by zxz.zhang on 16/8/12.
@@ -6,6 +6,6 @@ package com.fovoy.management;
 public class Test {
 
     public void test(){
-        System.out.println("Test");
+        System.out.println("test");
     }
 }
