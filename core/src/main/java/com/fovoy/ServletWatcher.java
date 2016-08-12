@@ -39,7 +39,6 @@ public class ServletWatcher implements ServletContextListener, Filter {
 //        manager.initHandlerContainer(context.getContextPath());
 //        setupHealthCheckPoller(context);
 //        startInstrument();
-//        QunarServer.SERVER_START();
 //        fixPort(context);
     }
 
