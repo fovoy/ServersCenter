@@ -1,6 +1,8 @@
 package com.fovoy;
 
+import com.fovoy.handler.HealthCheckHandler;
 import com.fovoy.management.ServersManager;
+import com.fovoy.rest.RestController;
 import com.fovoy.server.JettyServer;
 import com.fovoy.server.TomcatServer;
 import com.google.common.base.Supplier;
@@ -23,7 +25,10 @@ public class ServletWatcher implements ServletContextListener, Filter {
     private static final AtomicBoolean initialized = new AtomicBoolean(false);
 
 
-    public void init(FilterConfig filterConfig) throws ServletException {
+    public void init(FilterConfig config) throws ServletException {
+       init(config.getServletContext());
+        RestController rest = manager.getHandlers();
+        rest.registerHandler("/healthcheck.html", new HealthCheckHandler(manager));
 
     }
 
@@ -39,7 +44,7 @@ public class ServletWatcher implements ServletContextListener, Filter {
     private void init(ServletContext context) {
         if (!initialized.compareAndSet(false, true))
             return;
-//        manager.initHandlerContainer(context.getContextPath());
+        manager.initRestController(context.getContextPath());
         setupHealthCheckPoller(context);
 //        startInstrument();  // TODO: 16/8/13
         FovoyServer.ServerStart();

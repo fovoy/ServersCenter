@@ -82,7 +82,14 @@
                 <version>${logback.version}</version>
                 <scope>runtime</scope>
             </dependency>
-              <!--jetty-->
+            <!--apache-->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.3.2</version>
+            </dependency>
+
+            <!--jetty-->
             <dependency>
                 <groupId>org.mortbay.jetty</groupId>
                 <artifactId>jetty</artifactId>

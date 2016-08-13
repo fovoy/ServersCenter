@@ -10,6 +10,7 @@ import java.io.IOException;
  * Created by zxz.zhang on 16/8/12.
  */
 public interface RestHandler {
+
     void handle(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException,
             IOException;
 }
