@@ -4,6 +4,7 @@ import com.fovoy.common.FovoyException;
 
 import javax.servlet.FilterChain;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.Closeable;
 
 /**
@@ -21,6 +22,6 @@ public abstract class RestFilter implements Closeable {
     }
 
 
-    public abstract void process(HttpServletRequest request, FilterChain chain, RestFilterChain filterChain) throws Exception;
+    public abstract void process(HttpServletRequest request, HttpServletResponse response, FilterChain chain, RestFilterChain filterChain) throws Exception;
 
 }

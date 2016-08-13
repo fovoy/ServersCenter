@@ -5,7 +5,11 @@ package com.fovoy;
  */
 public interface Constants {
 
-    interface Center{
+    interface Center {
         String KEY_CENTER_SERVER = "cserver.host";
+    }
+
+    interface HEADER {
+        String HEADER_X_REAL_IP = "X-Real-IP";
     }
 }
