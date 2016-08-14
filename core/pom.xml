@@ -25,6 +25,10 @@
                 <artifactId>api</artifactId>
             </dependency>
             <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>concurrent</artifactId>
+            </dependency>
+            <dependency>
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
             </dependency>
