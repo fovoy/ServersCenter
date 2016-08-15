@@ -85,7 +85,7 @@ public class ServletWatcher implements ServletContextListener, Filter {
     }
 
     private void fixPort(ServletContext context) {
-        Server server = manager.getServerconfig().getServer();
+        Server server = manager.getConfig().getServer();
         if (server.getPort() <= 0) {
             server.setPort(portOf(context));
         }
@@ -109,7 +109,8 @@ public class ServletWatcher implements ServletContextListener, Filter {
 
 
     public void destroy() {
-
+        if (initialized.compareAndSet(true, false))
+            FovoyServer.ServerStop();
     }
 
 }

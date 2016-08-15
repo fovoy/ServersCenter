@@ -22,14 +22,11 @@ public class FovoyThreadFactory implements ThreadFactory {
         this.mDaemo = mDaemo;
         this.namePrefix = namePrefix;
         SecurityManager s = System.getSecurityManager();
-        group = (s != null) ? s.getThreadGroup() :
-                Thread.currentThread().getThreadGroup();
+        group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
     }
 
     public Thread newThread(Runnable r) {
-        Thread t = new Thread(group, r,
-                namePrefix + "[T#" + threadNumber.getAndIncrement() + "]",
-                0);
+        Thread t = new Thread(group, r, namePrefix + "[T#" + threadNumber.getAndIncrement() + "]", 0);
         t.setDaemon(mDaemo);
         return t;
     }

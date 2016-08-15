@@ -120,7 +120,6 @@ public class ManagedExecutors {
                 return new FovoyThreadFactory(name);
             }
         }
-
         return NON_FAC;
     }
 
@@ -221,7 +220,6 @@ public class ManagedExecutors {
         FinalizableDelegatedExecutorService(ExecutorService executor) {
             super(executor);
         }
-
         protected void finalize() {
             super.shutdown();
         }

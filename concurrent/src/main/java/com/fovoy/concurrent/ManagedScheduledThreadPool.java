@@ -27,7 +27,6 @@ public class ManagedScheduledThreadPool extends ScheduledThreadPoolExecutor impl
         super(corePoolSize, ManagedExecutors.defaultThreadFactory(), handler);
     }
 
-
     private static final Logger log = LoggerFactory.getLogger(ManagedThreadPool.class);
 
     private final AtomicLong finishTime = new AtomicLong();
@@ -58,7 +57,6 @@ public class ManagedScheduledThreadPool extends ScheduledThreadPoolExecutor impl
         } catch (Throwable e) {
             e.printStackTrace();
         }
-
         try {
             ThreadRecycles.release();
         } catch (Throwable e) {

@@ -1,5 +1,9 @@
 package com.fovoy;
 
+import com.fovoy.concurrent.Closer;
+import com.fovoy.concurrent.ManagedExecutors;
+import com.fovoy.management.ServerManagement;
+import com.fovoy.management.ServiceRecycle;
 import com.fovoy.util.FovoyFileUtil;
 import com.fovoy.util.LocalHost;
 import com.fovoy.util.LogUtil;
@@ -14,6 +18,7 @@ import javax.naming.spi.ObjectFactory;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
@@ -49,21 +54,17 @@ public class FovoyServer {
         return FovoyFileUtil.getFovoyStore();
     }
 
-    //TODO
-    public synchronized static void ServerStart() {
+    private static ExecutorManager em = null;
+
+    public synchronized static void ServerStart(){
         if (SERVER_STATUS != ServerStatus.SERVER_STATUS_PENDING) {
             return;
         }
-
         long serverStart = System.currentTimeMillis();
-
         SERVER_STATUS = ServerStatus.SERVER_STATUS_STARTED;
-
         log.info("fovoy server System starting...");
-
-        configFile =System.getProperty("fovoy.conf",configFile);
+        configFile = System.getProperty("fovoy.conf", configFile);
         File exf = new File("/~FovoyServer.disabled");
-
         try {
             if (conf_dir != null) {
                 exf = new File(conf_dir, configFile);
@@ -89,7 +90,6 @@ public class FovoyServer {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         LogUtil.log();
         LogUtil.log(LocalHost.getHostName());
         LogUtil.log();
@@ -99,49 +99,38 @@ public class FovoyServer {
 
         if (exf != null)
             initConfig(exf);
-
         LogUtil.log();
-
-
         log.info("fovoyServer core service init wasted in " + (System.currentTimeMillis() - serverStart));
-
         SERVER_STATUS = ServerStatus.SERVER_STATUS_STARTED;
-
     }
+
     @SuppressWarnings("unchecked")
     private static void initConfig(File exf) {
         FileInputStream confin = null;
-
         NodeList jdbcList = null;
         NodeList serviceList = null;
         NodeList executorList = null;
-
         try {
             confin = new FileInputStream(exf);
-            Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder()
-                    .parse(new InputSource(new InputStreamReader(confin, "UTF-8")));
+            Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(new InputSource(new InputStreamReader(confin, "UTF-8")));
             XPathFactory factory = XPathFactory.newInstance();
-            executorList = (NodeList) factory.newXPath().compile("/server/executors")
-                    .evaluate(doc, XPathConstants.NODESET);
+            executorList = (NodeList) factory.newXPath().compile("/server/executors").evaluate(doc, XPathConstants.NODESET);
             jdbcList = (NodeList) factory.newXPath().compile("/server/jdbc").evaluate(doc, XPathConstants.NODESET);
-            serviceList = (NodeList) factory.newXPath().compile("/server/service")
-                    .evaluate(doc, XPathConstants.NODESET);
+            serviceList = (NodeList) factory.newXPath().compile("/server/service").evaluate(doc, XPathConstants.NODESET);
         } catch (Throwable e) {
             log.error("fovoyServer 启动失败 ：配置文件解析错误！" + configFile, e);
             if (!LocalHost.isBeta()) throw new IllegalStateException("fovoyServer 启动失败 ：配置文件解析错误！" + configFile, e);
         } finally {
-//            Closer.close(confin);//// TODO: 16/8/13
+            Closer.close(confin);
         }
-
         if (executorList.getLength() > 0) {
             try {
-//                em = new ExecutorManager((Element) executorList.item(0)); // TODO: 16/8/13  
+                em = new ExecutorManager((Element) executorList.item(0));
             } catch (Throwable e) {
                 log.error("ExecutorManager 加载失败 ", e);
                 if (!LocalHost.isBeta()) throw new IllegalStateException("ExecutorManager 加载失败 " + configFile, e);
             }
         }
-
         if (jdbcList.getLength() > 0) {
             ObjectFactory factory = null;
             try {
@@ -193,6 +182,64 @@ public class FovoyServer {
                 if (!LocalHost.isBeta()) throw new IllegalStateException("服务启动失败[" + serviceName + "]:" + className, e);
             }
         }
+    }
+
+    public synchronized static void ServerStop() {
+        if (SERVER_STATUS != ServerStatus.SERVER_STATUS_STARTED) return;
+        SERVER_STATUS = ServerStatus.SERVER_STATUS_STOPPING;
+        log.info("FovoyServer core service stoping");
+
+        ManagedExecutors.getScheduleExecutor().shutdown();
+
+        stopServices();
+
+        ServerManagement sm = ServersContainer.getService(ServerManagement.class);
+        if(sm != null && sm instanceof ServiceRecycle){
+            try {
+                ((ServiceRecycle) sm).destroy();
+            }catch (Throwable t){
+                log.info("ServerManagement[" + sm + "]已释放");
+            }
+        }
+
+        closeResources();
+
+        if (em != null) em.destroy();
+
+        ManagedExecutors.getExecutor().shutdown();
+
+        log.info("FovoyServer core service shutdown");
+        SERVER_STATUS = ServerStatus.SERVER_STATUS_PENDING;
+    }
+    private static void closeResources() {
+        @SuppressWarnings("unchecked")
+        Map.Entry<String, Closeable>[] arr1 = new Map.Entry[resources.size()];
+        resources.entrySet().toArray(arr1);
+        for (int i = arr1.length - 1; i >= 0; i--) {
+            Map.Entry<String, Closeable> entry = arr1[i];
+            try {
+                entry.getValue().close();
+                log.info("资源[" + entry.getKey() + "]已释放");
+            } catch (Throwable t) {
+                log.error("资源[" + entry.getKey() + "]在释放时遇到一个错误 " + t.getMessage(), t);
+            }
+        }
+        resources.clear();
+    }
+    private static void stopServices() {
+        @SuppressWarnings("unchecked")
+        Map.Entry<String, Service>[] arr = new Map.Entry[services.size()];
+        services.entrySet().toArray(arr);
+        for (int i = arr.length - 1; i >= 0; i--) {
+            Map.Entry<String, Service> entry = arr[i];
+            try {
+                entry.getValue().destroy();
+                log.info("服务[" + entry.getKey() + "]已关闭");
+            } catch (Throwable t) {
+                log.error("服务[" + entry.getKey() + "]在关闭时遇到一个错误 " + t.getMessage(), t);
+            }
+        }
+        services.clear();
     }
 
     private static void setParameter(Reference ref, NamedNodeMap map) {
